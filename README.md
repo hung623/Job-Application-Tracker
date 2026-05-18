@@ -2,24 +2,22 @@
 
 A Streamlit app to track job applications with a user-friendly workflow and lightweight analytics.
 
-## What this version adds
+## Features
 
-- Easier **status updates** (bulk edit with a status dropdown and save button)
-- Better UX with tabs: **Dashboard**, **Pipeline Board**, and **Manage**
-- Follow-up workflow support with **follow-up dates**
-- Optional tracking fields commonly used in job search trackers:
-  - Source (LinkedIn, referral, etc.)
+- Add and track applications with:
+  - Company name
+  - Job title
+  - Status (`Applied`, `Interview`, `Rejected`, `Offer`)
+  - Notes
+  - Deadline
+- Extra fields for realistic tracking:
+  - Source
   - Priority
+  - Follow-up date
   - Job URL
-- One-click **demo data generator** so you can test instantly
-
-## Core tracked fields
-
-- Company name
-- Job title
-- Status: `Applied`, `Interview`, `Rejected`, `Offer`
-- Notes
-- Deadlines
+- Bulk edit in-place from the **Manage** tab (including status changes)
+- Pipeline board by status stage
+- One-click random demo data population for testing
 
 ## Run locally
 

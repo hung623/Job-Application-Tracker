@@ -2,6 +2,7 @@ import random
 import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -50,7 +51,7 @@ def init_db() -> None:
                 conn.execute(sql)
 
 
-def add_application(data: dict) -> None:
+def add_application(data: dict[str, Any]) -> None:
     with get_conn() as conn:
         conn.execute(
             """
@@ -84,11 +85,27 @@ def load_applications() -> pd.DataFrame:
         )
 
 
-def update_statuses(status_updates: dict[int, str]) -> int:
+def bulk_update_applications(rows: list[dict[str, Any]]) -> int:
     changed = 0
     with get_conn() as conn:
-        for app_id, status in status_updates.items():
-            conn.execute("UPDATE applications SET status = ? WHERE id = ?", (status, app_id))
+        for row in rows:
+            conn.execute(
+                """
+                UPDATE applications
+                SET status = ?, priority = ?, source = ?, deadline = ?, follow_up_date = ?, notes = ?, job_url = ?
+                WHERE id = ?
+                """,
+                (
+                    row["status"],
+                    row["priority"],
+                    row["source"],
+                    row["deadline"],
+                    row["follow_up_date"],
+                    row["notes"],
+                    row["job_url"],
+                    int(row["id"]),
+                ),
+            )
             changed += 1
     return changed
 
@@ -138,8 +155,8 @@ def main() -> None:
                 priority = st.selectbox("Priority", PRIORITIES)
             with c2:
                 source = st.selectbox("Source", SOURCES)
-            deadline = st.date_input("Deadline", value=None)
-            follow_up_date = st.date_input("Follow-up date", value=None)
+            deadline = st.date_input("Deadline", value=date.today())
+            follow_up_date = st.date_input("Follow-up date", value=date.today() + timedelta(days=3))
             job_url = st.text_input("Job URL")
             notes = st.text_area("Notes")
             submitted = st.form_submit_button("Save application")
@@ -164,7 +181,7 @@ def main() -> None:
 
         if st.button("🎲 Populate demo data"):
             seed_random_data()
-            st.success("Added demo data. Refresh if needed.")
+            st.success("Added demo data.")
 
     df = load_applications()
 
@@ -188,29 +205,8 @@ def main() -> None:
             status_counts = df["status"].value_counts().reindex(STATUSES, fill_value=0)
             st.bar_chart(status_counts)
 
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.markdown("#### Upcoming deadlines")
-                deadlines = df[df["deadline"].notna()].copy()
-                if deadlines.empty:
-                    st.write("No deadlines set.")
-                else:
-                    deadlines["deadline"] = pd.to_datetime(deadlines["deadline"], errors="coerce")
-                    upcoming = deadlines[deadlines["deadline"] >= pd.Timestamp.today().normalize()].sort_values("deadline")
-                    st.dataframe(upcoming[["company_name", "job_title", "status", "deadline", "priority"]], hide_index=True)
-
-            with col_b:
-                st.markdown("#### Follow-up queue")
-                followups = df[df["follow_up_date"].notna()].copy()
-                if followups.empty:
-                    st.write("No follow-ups set.")
-                else:
-                    followups["follow_up_date"] = pd.to_datetime(followups["follow_up_date"], errors="coerce")
-                    queue = followups.sort_values("follow_up_date")
-                    st.dataframe(queue[["company_name", "job_title", "status", "follow_up_date"]], hide_index=True)
-
     with board_tab:
-        st.markdown("Drag-like view of your pipeline by stage.")
+        st.markdown("Pipeline by stage")
         if df.empty:
             st.write("No data yet.")
         else:
@@ -222,16 +218,16 @@ def main() -> None:
                     if cards.empty:
                         st.caption("—")
                     for _, row in cards.iterrows():
-                        st.markdown(f"**{row['company_name']}**  ")
+                        st.markdown(f"**{row['company_name']}**")
                         st.caption(f"{row['job_title']} · {row['priority']}")
 
     with manage_tab:
-        st.markdown("### Bulk update statuses")
         if df.empty:
             st.write("No data yet.")
             return
+        st.markdown("### Edit and save")
+        edit_df = df[["id", "company_name", "job_title", "status", "priority", "source", "deadline", "follow_up_date", "notes", "job_url"]].copy()
 
-        edit_df = df[["id", "company_name", "job_title", "status", "priority", "source", "deadline", "follow_up_date"]].copy()
         edited = st.data_editor(
             edit_df,
             hide_index=True,
@@ -245,15 +241,10 @@ def main() -> None:
             key="editor",
         )
 
-        if st.button("Save status changes", type="primary"):
-            merged = edited.merge(df[["id", "status"]], on="id", suffixes=("_new", "_old"))
-            changed_rows = merged[merged["status_new"] != merged["status_old"]]
-            updates = {int(row["id"]): row["status_new"] for _, row in changed_rows.iterrows()}
-            if updates:
-                count = update_statuses(updates)
-                st.success(f"Updated {count} application(s).")
-            else:
-                st.info("No status changes detected.")
+        if st.button("Save changes", type="primary"):
+            rows = edited.to_dict(orient="records")
+            count = bulk_update_applications(rows)
+            st.success(f"Saved {count} application(s).")
 
         st.markdown("### Delete application")
         selected_id = st.selectbox("Application ID", df["id"].tolist())
