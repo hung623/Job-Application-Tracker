@@ -32,6 +32,3 @@ streamlit run app.py
 
 Data is stored in local SQLite (`applications.db`).
 
-## Merge status
-
-Conflict markers have been resolved in this branch for README.md, app.py, and test_app.py.
