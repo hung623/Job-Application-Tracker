@@ -18,6 +18,16 @@ A Streamlit app to track job applications with a user-friendly workflow and ligh
 - Bulk edit in-place from the **Manage** tab (including status changes)
 - Pipeline board by status stage
 - One-click random demo data population for testing
+A Streamlit app to track job applications with statuses, notes, deadlines, and a statistics dashboard.
+
+## Features
+
+- Company name
+- Job title
+- Status (`Applied`, `Interview`, `Rejected`, `Offer`)
+- Notes
+- Deadlines
+- Statistics dashboard (counts by status + upcoming deadlines)
 
 ## Run locally
 
@@ -32,3 +42,4 @@ streamlit run app.py
 
 Data is stored in local SQLite (`applications.db`).
 
+The app stores data in a local SQLite file named `applications.db` in the project directory.
